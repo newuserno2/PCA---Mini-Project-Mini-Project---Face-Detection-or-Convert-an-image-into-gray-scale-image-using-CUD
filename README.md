@@ -99,7 +99,9 @@ __global__void rgba_to_grey(uchar4 *const d_rgba, unsigned char *const d_grey,
 	Each block holds BLOCK_WIDTH*BLOCK_WIDTH threads and in total we have
 	
 	(rows/BLOCK_WIDTH)*(cols/BLOCK_WIDTH) blocks.
+	
 */
+	
 void rgba_to_grey_launcher(uchar4 *const d_rgba, unsigned char *const d_grey,
 							size_t rows, size_t cols) {
 	
