@@ -1,122 +1,33 @@
-# PCA-Mini-Project---Face-Detection-or-Convert-an-image-into-gray-scale-image-using-CUD
+#include <stdio.h>
 
-Mini Project - Face Detection or Convert an image into gray scale image using CUDA GPU programming
+__global__ void kernel(unsigned char* d_in, unsigned char* d_out){
+    int idx = blockIdx.x;
+	int idy = threadIdx.x;
+	
+	int gray_adr = idx*64 + idy;    // calculating address for writing grayscale value
+	int clr_adr = 3*gray_adr;       // calculating address for reading RGB values
 
-/*
-
-	kernel.cu
-	
-	Holds the kernel for the main program
-	
-*/
-
-#include <iostream>
-
-#define BLOCK_WIDTH 32
-	
-#define cuda_check_errors(val) check( (val), #val, __FILE__, __LINE__)
-	
-
-using namespace std;
-
-/*
-	
-	Reports the location of the occured error and exits the program
-	
-*/
-	
-template<typename T>
-	
-void check(T err, const char* const func, const char* const file,
-	
-			const int line) {
-	
-	if (err != cudaSuccess) {
-	
-		cerr << "CUDA error at: " << file << ":" << line << endl;
-	
-		cerr << cudaGetErrorString(err) << " " << func << endl;
-	
-		exit(1);
-	
-	}
-	
+	if(gray_adr<(64*64))
+		{
+			double gray_val = 0.144*d_in[clr_adr] + 0.587*d_in[clr_adr+1] + 0.299*d_in[clr_adr+2];
+			d_out[gray_adr] = (unsigned char)gray_val;
+			//printf(" %d:%d=[%d,%d,%d,%d] \n", idx,idy,d_in[clr_adr],d_in[clr_adr+1],d_in[clr_adr+2],(int)gray_val);
+		}
 }
 
-/*
-	
-	The primary kernel (heart of the program!)
-	
-	Each pixel p in the RGBA image is a struct of four unsigned chars:
-	
-		- p.x Which is the red channel number.
-	
-		- p.y The green channel.
-	
-		- p.z The blue channel.
-	
-		- p.w The alpha channel (which we ignore).
-	
-	For each greyscale pixel to be created we calculate this formula:
-	
-		p = .299*p.x + .587*p.y + .114*p.z
-	
-	The output is a single char because we only have one channel.
-	
-	In the kernel each thread is responsible for calculating the mentioned
-	
-	formula for each pixel and the put the result into the greyscale
-	
-	image placehold.
-	
-	First we find out where the thread (pixel) is and then we do the
-	
-	above.
-*/
-	
-__global__void rgba_to_grey(uchar4 *const d_rgba, unsigned char *const d_grey, 
-	
-					size_t rows, size_t cols) {
-	
-	size_t j = blockIdx.y * blockDim.y + threadIdx.y;
-	
-	size_t i = blockIdx.x * blockDim.x + threadIdx.x;
-	
-	if (i >= rows || j >= cols) 
-	
-		return;
-	
-	uchar4 p = d_rgba[i * cols + j];
-	
-	d_grey[i * cols + j] = (unsigned char) (0.299f * p.x + 0.587f * p.y + 0.114f * p.z);
-	
-}
+//   Kernel Calling Function
 
-/*
+extern "C" void gray_parallel(unsigned char* h_in, unsigned char* h_out, int elems, int rows, int cols){
+
+	unsigned char* d_in;
+	unsigned char* d_out;
+	cudaMalloc((void**) &d_in, elems);
+	cudaMalloc((void**) &d_out, rows*cols);
 	
-	The image is divided into number of blocks.
-	
-	Each block holds BLOCK_WIDTH*BLOCK_WIDTH threads and in total we have
-	
-	(rows/BLOCK_WIDTH)*(cols/BLOCK_WIDTH) blocks.
-	
-*/
-	
-void rgba_to_grey_launcher(uchar4 *const d_rgba, unsigned char *const d_grey,
-							size_t rows, size_t cols) {
-	
-    const dim3 block_size (BLOCK_WIDTH, BLOCK_WIDTH, 1);
-	
-    unsigned int grid_x = (unsigned int) (rows / BLOCK_WIDTH + 1);
-	
-    unsigned int grid_y = (unsigned int) (cols / BLOCK_WIDTH + 1);
-	
-    const dim3 grid_size (grid_x, grid_y, 1);
-	
-    rgba_to_grey<<<grid_size, block_size>>>(d_rgba, d_grey, rows, cols);
-	
-    cudaDeviceSynchronize();
-	
-    cuda_check_errors(cudaGetLastError());
-	
+	cudaMemcpy(d_in, h_in, elems*sizeof(unsigned char), cudaMemcpyHostToDevice);
+    kernel<<<rows,cols>>>(d_out, d_in);
+
+	cudaMemcpy(h_out, d_out, rows*cols*sizeof(unsigned char), cudaMemcpyDeviceToHost);
+	cudaFree(d_in);
+	cudaFree(d_out);
 }
