@@ -24,7 +24,9 @@ __global__ void kernel(unsigned char* d_in, unsigned char* d_out)
 			
 			d_out[gray_adr] = (unsigned char)gray_val;
 			
-			//printf(" %d:%d=[%d,%d,%d,%d] \n", idx,idy,d_in[clr_adr],d_in[clr_adr+1],d_in[clr_adr+2],(int)gray_val);
+			//printf(" %d:%d=[%d,%d,%d,%d] \n", idx,idy,d_in[clr_adr],
+			
+			d_in[clr_adr+1],d_in[clr_adr+2],(int)gray_val);
 			
 		}
 }
